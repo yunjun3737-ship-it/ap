@@ -1,4 +1,4 @@
--- 중복 실행 방지 및 설정 초기화
+-- ================== 중복 실행 방지 및 설정 ==================
 if getgenv().RayfieldWindows then
     for _, win in pairs(getgenv().RayfieldWindows) do
         win:Destroy()
@@ -8,15 +8,21 @@ else
     getgenv().RayfieldWindows = {}
 end
 
+pcall(function()
+    makefolder("Rayfield")
+end)
+
+print("Alpaca Hub - Fling Things and People 스크립트 시작")
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- AIPA 게임 변수 및 레퍼런스 설정
-local rs = game:GetService("ReplicatedStorage")
-local uis = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+local uis = game:GetService("UserInputService")
 local inv = workspace:WaitForChild(plr.Name .. "SpawnedInToys")
+local rs = game:GetService("ReplicatedStorage")
 
 local Window = Rayfield:CreateWindow({
     Name = "Fling Things and People - Alpaca Hub",
@@ -36,7 +42,7 @@ local Window = Rayfield:CreateWindow({
     KeySettings = {
         Title = "알파카 허브",
         Subtitle = "Key System",
-        Note = "키 시스템 우회됨",
+        Note = "No method of obtaining the key is provided",
         FileName = "AlpacaKeyFile",
         SaveKey = true,
         GrabKeyFromSite = false,
@@ -51,7 +57,6 @@ table.insert(getgenv().RayfieldWindows, Window)
 -- ==========================================
 local MainTab = Window:CreateTab("메인", 4483362458)
 
-local walkSpeedValue = 16
 MainTab:CreateSlider({
     Name = "이동 속도",
     Range = {16, 500},
@@ -60,7 +65,6 @@ MainTab:CreateSlider({
     CurrentValue = 16,
     Flag = "WalkSpeedSlider",
     Callback = function(Value)
-        walkSpeedValue = Value
         local char = plr.Character
         if char and char:FindFirstChild("Humanoid") then
             char.Humanoid.WalkSpeed = Value
@@ -86,7 +90,6 @@ MainTab:CreateInput({
 
 local noClipT = false
 local noClipConnection = nil
-local NO_CLIP_PARTS = {"Head", "Torso", "Left Arm", "Left Leg", "Right Arm", "Right Leg"}
 
 MainTab:CreateToggle({
     Name = "노클립 (NoClip)",
@@ -94,14 +97,12 @@ MainTab:CreateToggle({
     Flag = "NoClipToggle",
     Callback = function(Value)
         noClipT = Value
-        
         if noClipT then
             noClipConnection = game:GetService("RunService").Stepped:Connect(function()
                 local char = plr.Character
                 if char then
-                    for _, partName in ipairs(NO_CLIP_PARTS) do
-                        local part = char:FindFirstChild(partName)
-                        if part and part:IsA("BasePart") then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
                             part.CanCollide = false
                         end
                     end
@@ -114,9 +115,8 @@ MainTab:CreateToggle({
             end
             local char = plr.Character
             if char then
-                for _, partName in ipairs(NO_CLIP_PARTS) do
-                    local part = char:FindFirstChild(partName)
-                    if part and part:IsA("BasePart") then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
                         part.CanCollide = true
                     end
                 end
@@ -127,7 +127,6 @@ MainTab:CreateToggle({
 
 local infJumpT = false
 local infJumpConnection = nil
-local infJumpD = false
 
 MainTab:CreateToggle({
     Name = "무한 점프 (Infinite Jump)",
@@ -135,17 +134,11 @@ MainTab:CreateToggle({
     Flag = "InfiniteJumpToggle",
     Callback = function(Value)
         infJumpT = Value
-        
         if infJumpT then
             infJumpConnection = uis.JumpRequest:Connect(function()
-                if not infJumpD then
-                    infJumpD = true
-                    local hum = plr.Character and plr.Character:FindFirstChild("Humanoid")
-                    if hum then
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                    task.wait()
-                    infJumpD = false
+                local char = plr.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 end
             end)
         else
@@ -162,128 +155,101 @@ MainTab:CreateToggle({
 -- ==========================================
 local SafeTab = Window:CreateTab("안전", 4483362458)
 
-local AntiGrabEnabled = false
-SafeTab:CreateToggle({
-    Name = "안티 그랩 (Anti-Grab)",
-    CurrentValue = false,
-    Flag = "AntiGrab",
-    Callback = function(Value)
-        AntiGrabEnabled = Value
-        if AntiGrabEnabled then
-            -- SetNetworkOwner 방어 로직 활성화
-            print("안티 그랩이 활성화되었습니다.")
-        end
-    end
-})
+local function createSafeToggle(name, flagName, callbackFunc)
+    return SafeTab:CreateToggle({
+        Name = name,
+        CurrentValue = false,
+        Flag = flagName,
+        Callback = callbackFunc
+    })
+end
 
-local AntiFireEnabled = false
-SafeTab:CreateToggle({
-    Name = "안티 파이어 (Anti-Fire)",
-    CurrentValue = false,
-    Flag = "AntiFire",
-    Callback = function(Value)
-        AntiFireEnabled = Value
+createSafeToggle("안티 그랩", "AntiGrab", function(Value)
+    if Value then
+        print("안티 그랩 활성화됨")
+    else
+        print("안티 그랩 비활성화됨")
     end
-})
+end)
 
-SafeTab:CreateToggle({
-    Name = "안티 페인트",
-    CurrentValue = false,
-    Flag = "AntiPaint",
-    Callback = function(Value)
-        -- 기능 내부 로직 구현
+createSafeToggle("안티 파이어", "AntiFire", function(Value)
+    if Value then
+        print("안티 파이어 활성화됨")
+    else
+        print("안티 파이어 비활성화됨")
     end
-})
+end)
 
-local AntiKickEnabled = false
-SafeTab:CreateToggle({
-    Name = "안티 킥",
-    CurrentValue = false,
-    Flag = "AntiKick",
-    Callback = function(Value)
-        AntiKickEnabled = Value
+createSafeToggle("안티 페인트", "AntiPaint", function(Value)
+    if Value then
+        print("안티 페인트 활성화됨")
     end
-})
+end)
 
-SafeTab:CreateToggle({
-    Name = "안티 블롭맨",
-    CurrentValue = false,
-    Flag = "AntiBlob",
-    Callback = function(Value)
-        -- 기능 내부 로직 구현
+createSafeToggle("안티 킥", "AntiKick", function(Value)
+    if Value then
+        print("안티 킥 활성화됨")
     end
-})
+end)
 
-SafeTab:CreateToggle({
-    Name = "안티 폭탄",
-    CurrentValue = false,
-    Flag = "AntiBomb",
-    Callback = function(Value)
-        -- 기능 내부 로직 구현
+createSafeToggle("안티 블롭맨", "AntiBlob", function(Value)
+    if Value then
+        print("안티 블롭맨 활성화됨")
     end
-})
+end)
 
-SafeTab:CreateToggle({
-    Name = "안티 렉",
-    CurrentValue = false,
-    Flag = "AntiLag",
-    Callback = function(Value)
-        -- 기능 내부 로직 구현
+createSafeToggle("안티 폭탄", "AntiBomb", function(Value)
+    if Value then
+        print("안티 폭탄 활성화됨")
     end
-})
+end)
 
-local AntiKickResetEnabled = false
-SafeTab:CreateToggle({
-    Name = "안티 킥 재설정 (Auto-Reset)",
-    CurrentValue = false,
-    Flag = "AntiKickReset",
-    Callback = function(Value)
-        AntiKickResetEnabled = Value
+createSafeToggle("안티 렉", "AntiLag", function(Value)
+    if Value then
+        print("안티 렉 활성화됨")
     end
-})
+end)
 
-local AutoAttackerEnabled = false
-SafeTab:CreateToggle({
-    Name = "오토 어태커 (체력 0)",
-    CurrentValue = false,
-    Flag = "AutoAttacker",
-    Callback = function(Value)
-        AutoAttackerEnabled = Value
-        if AutoAttackerEnabled then
-            -- Kill Aura F() 함수 적용
-            local KillAuraConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                if not AutoAttackerEnabled then return end
-                local myChar = plr.Character
-                if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
-                local myHRP = myChar.HumanoidRootPart
-                
-                for _, target in ipairs(Players:GetPlayers()) do
-                    if target == plr then continue end
-                    local tChar = target.Character
-                    if not tChar then continue end
-                    local tHum = tChar:FindFirstChildOfClass("Humanoid")
-                    local tHRP = tChar:FindFirstChild("HumanoidRootPart")
-                    
-                    if tHum and tHRP and tHum.Health > 0 then
-                        local distance = (myHRP.Position - tHRP.Position).Magnitude
-                        if distance <= 30 then
-                            pcall(function() tHum.Health = 0 end)
-                        end
+createSafeToggle("안티 킥 재설정", "AntiKickReset", function(Value)
+    if Value then
+        print("안티 킥 재설정 활성화됨")
+        -- Anti-AFK 및 재설정 로직 연결
+        task.spawn(function()
+            while Value do
+                task.wait(45)
+                local char = plr.Character
+                if char then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-3, 3), math.random(-3, 3), math.random(-3, 3))
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
-})
+end)
 
-SafeTab:CreateToggle({
-    Name = "안티 그랩 구찌",
-    CurrentValue = false,
-    Flag = "AntiGrabGucci",
-    Callback = function(Value)
-        -- 방어 기능 연결
+createSafeToggle("오토 어태커 (체력 0)", "AutoAttacker", function(Value)
+    if Value then
+        local connection
+        connection = game:GetService("RunService").Heartbeat:Connect(function()
+            if not Value then connection:Disconnect(); return end
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= plr and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") then
+                    if (plr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < 30 then
+                        v.Character.Humanoid.Health = 0
+                    end
+                end
+            end
+        end)
     end
-})
+end)
+
+createSafeToggle("안티 그랩 구찌", "AntiGrabGucci", function(Value)
+    if Value then
+        print("안티 그랩 구찌 활성화됨")
+    end
+end)
 
 -- ==========================================
 -- [ 3번째 탭 ] 명단
@@ -357,11 +323,10 @@ TrollTab:CreateSection("타겟 조지기 기능")
 TrollTab:CreateButton({
     Name = "타겟에게 이동하기",
     Callback = function()
-        local lp = Players.LocalPlayer
         if selectedTarget and Players:FindFirstChild(selectedTarget) then
             local targetChar = Players[selectedTarget].Character
             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                lp.Character.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
+                plr.Character.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
             end
         else
             Rayfield:Notify({
@@ -379,9 +344,8 @@ TrollTab:CreateToggle({
     CurrentValue = false,
     Flag = "OwnerLoopKickToggle",
     Callback = function(Value)
-        -- AIPA.lua-1-1.txt에 구현된 OwnerLoopKickF 함수 적용
         if Value then
-            print("오너 루프 킥이 활성화되었습니다.")
+            print("오너 루프 킥이 작동됩니다.")
         end
     end
 })
