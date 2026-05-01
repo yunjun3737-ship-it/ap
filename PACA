@@ -1,260 +1,316 @@
--- ================== 중복 실행 방지 및 설정 ==================
-if getgenv().RayfieldWindows then
-    for _, win in pairs(getgenv().RayfieldWindows) do
-        win:Destroy()
-    end
-    getgenv().RayfieldWindows = {}
-else
-    getgenv().RayfieldWindows = {}
-end
+-- ================== AIPA.lua-1-1 원본 설정 + 중복 실행 방지 ==================
+local FN_BYPASS = false
+local TESTPP = false
+
+if _G.NP_FTAP_LOADED then return end
+_G.NP_FTAP_LOADED = true
 
 pcall(function()
     makefolder("Rayfield")
 end)
 
-print("Alpaca Hub - Fling Things and People 스크립트 시작")
+print("AP FTAP Script 시작 - 설정 저장 활성화")
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- ================== Rayfield 로드 ==================
+print("Rayfield 로드 시작...")
+local RayfieldLoadSuccess, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
 
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
-local cam = workspace.CurrentCamera
-local mouse = plr:GetMouse()
-local uis = game:GetService("UserInputService")
-local inv = workspace:WaitForChild(plr.Name .. "SpawnedInToys")
-local rs = game:GetService("ReplicatedStorage")
-
-local Window = Rayfield:CreateWindow({
-    Name = "Fling Things and People - Alpaca Hub",
-    LoadingTitle = "Alpaca's Script Interface",
-    LoadingSubtitle = "by Alpaca",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = nil, 
-        FileName = "FlingThingsConfig"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "noinvitelink",
-        RememberJoins = true
-    },
-    KeySystem = true,
-    KeySettings = {
-        Title = "알파카 허브",
-        Subtitle = "Key System",
-        Note = "No method of obtaining the key is provided",
-        FileName = "AlpacaKeyFile",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = {"알파카"}
-    }
-})
-
-table.insert(getgenv().RayfieldWindows, Window)
-
--- ==========================================
--- [ 1번째 탭 ] 메인
--- ==========================================
-local MainTab = Window:CreateTab("메인", 4483362458)
-
-MainTab:CreateSlider({
-    Name = "이동 속도",
-    Range = {16, 500},
-    Increment = 10,
-    Suffix = "spd",
-    CurrentValue = 16,
-    Flag = "WalkSpeedSlider",
-    Callback = function(Value)
-        local char = plr.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = Value
-        end
-    end
-})
-
-MainTab:CreateInput({
-    Name = "점프 높이 설정 (숫자 입력)",
-    PlaceholderText = "숫자를 입력하세요",
-    RemoveTextOnFocus = false,
-    Callback = function(Text)
-        local num = tonumber(Text)
-        if num then
-            local char = plr.Character
-            if char and char:FindFirstChild("Humanoid") then
-                char.Humanoid.UseJumpPower = true
-                char.Humanoid.JumpPower = num
-            end
-        end
-    end
-})
-
-local noClipT = false
-local noClipConnection = nil
-
-MainTab:CreateToggle({
-    Name = "노클립 (NoClip)",
-    CurrentValue = false,
-    Flag = "NoClipToggle",
-    Callback = function(Value)
-        noClipT = Value
-        if noClipT then
-            noClipConnection = game:GetService("RunService").Stepped:Connect(function()
-                local char = plr.Character
-                if char then
-                    for _, part in pairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        else
-            if noClipConnection then
-                noClipConnection:Disconnect()
-                noClipConnection = nil
-            end
-            local char = plr.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    end
-})
-
-local infJumpT = false
-local infJumpConnection = nil
-
-MainTab:CreateToggle({
-    Name = "무한 점프 (Infinite Jump)",
-    CurrentValue = false,
-    Flag = "InfiniteJumpToggle",
-    Callback = function(Value)
-        infJumpT = Value
-        if infJumpT then
-            infJumpConnection = uis.JumpRequest:Connect(function()
-                local char = plr.Character
-                if char and char:FindFirstChild("Humanoid") then
-                    char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
-            end)
-        else
-            if infJumpConnection then
-                infJumpConnection:Disconnect()
-                infJumpConnection = nil
-            end
-        end
-    end
-})
-
--- ==========================================
--- [ 2번째 탭 ] 안전
--- ==========================================
-local SafeTab = Window:CreateTab("안전", 4483362458)
-
-local function createSafeToggle(name, flagName, callbackFunc)
-    return SafeTab:CreateToggle({
-        Name = name,
-        CurrentValue = false,
-        Flag = flagName,
-        Callback = callbackFunc
-    })
+if not RayfieldLoadSuccess or not Rayfield then
+    warn("Rayfield 로드 실패!")
+    pcall(function() rconsoleprint("@@RED@@[오류] Rayfield 로드 실패! 인터넷 연결이나 익스플로잇 환경을 확인하세요.\n") end)
+    return
+else
+    print("Rayfield 로드 성공")
+    pcall(function() rconsoleprint("@@GREEN@@[성공] Rayfield 로드 완료\n") end)
 end
 
-createSafeToggle("안티 그랩", "AntiGrab", function(Value)
-    if Value then
-        print("안티 그랩 활성화됨")
-    else
-        print("안티 그랩 비활성화됨")
-    end
-end)
+print("이스크립트는 알파카에의해 만들어졌습니다.")
+Players = game:GetService("Players")
+plr = game.Players.LocalPlayer
+cam = workspace.CurrentCamera
+mouse = plr:GetMouse()
+uis = game:GetService("UserInputService")
+inv = workspace:WaitForChild(plr.Name.."SpawnedInToys")
+rs = game:GetService("ReplicatedStorage")
+RepStorage = game:GetService("ReplicatedStorage")
+rs2 = game:GetService("RunService")
+deb = game:GetService("Debris")
 
-createSafeToggle("안티 파이어", "AntiFire", function(Value)
-    if Value then
-        print("안티 파이어 활성화됨")
-    else
-        print("안티 파이어 비활성화됨")
-    end
-end)
+SetNetworkOwner = rs.GrabEvents.SetNetworkOwner
+DestroyGrabLine = rs.GrabEvents.DestroyGrabLine
 
-createSafeToggle("안티 페인트", "AntiPaint", function(Value)
-    if Value then
-        print("안티 페인트 활성화됨")
-    end
-end)
+Auto = syn and syn.queue_on_teleport or fluxus and fluxus.queue_on_teleport or queue_on_teleport
 
-createSafeToggle("안티 킥", "AntiKick", function(Value)
-    if Value then
-        print("안티 킥 활성화됨")
-    end
-end)
+Whitelist = {}
+playersInLoop1V = {} -- List
+playersInLoop2V = {} -- Loop
 
-createSafeToggle("안티 블롭맨", "AntiBlob", function(Value)
-    if Value then
-        print("안티 블롭맨 활성화됨")
-    end
-end)
+PPs = workspace:WaitForChild("PlotItems"):WaitForChild("PlayersInPlots")
 
-createSafeToggle("안티 폭탄", "AntiBomb", function(Value)
-    if Value then
-        print("안티 폭탄 활성화됨")
-    end
-end)
+----------------------------------------------------------------------------------------- [ 기본 설정 ]
+function PcldOwner()
+    task.spawn(function()
+        while task.wait(0.1) do
+            usedNames = {}
 
-createSafeToggle("안티 렉", "AntiLag", function(Value)
-    if Value then
-        print("안티 렉 활성화됨")
-    end
-end)
+            for _, pcld in pairs(workspace:GetChildren()) do
+                if pcld.Name == "PlayerCharacterLocationDetector" then
+                    if pcld.CFrame == CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1) then
+                        continue
+                    end
 
-createSafeToggle("안티 킥 재설정", "AntiKickReset", function(Value)
-    if Value then
-        print("안티 킥 재설정 활성화됨")
-        -- Anti-AFK 및 재설정 로직 연결
-        task.spawn(function()
-            while Value do
-                task.wait(45)
-                local char = plr.Character
-                if char then
-                    local hrp = char:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-3, 3), math.random(-3, 3), math.random(-3, 3))
+                    hasOwner = false
+                    existingBoolValues = {}
+
+                    for _, child in pairs(pcld:GetChildren()) do
+                        if child:IsA("BoolValue") then
+                            table.insert(existingBoolValues, child)
+                        end
+                    end
+
+                    if #existingBoolValues >= 2 then
+                        for _, boolValue in pairs(existingBoolValues) do
+                            boolValue:Destroy()
+                        end
+                    elseif #existingBoolValues == 1 then
+                        hasOwner = true
+                    end
+
+                    if hasOwner then
+                        continue
+                    end
+
+                    closestPlayer = nil
+                    closestDist = 30
+                    candidates = {}
+
+                    for _, player in pairs(Players:GetPlayers()) do
+                        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            hrp = player.Character.HumanoidRootPart
+                            dist = (pcld.Position - hrp.Position).Magnitude
+
+                            if dist < closestDist then
+                                table.insert(candidates, {
+                                   player = player,
+                                    dist = dist,
+                                    hrp = hrp
+                                })
+                            end
+                        end
+                    end
+
+                    table.sort(candidates, function(a, b)
+                        return a.dist < b.dist
+                    end)
+
+                    for _, candidate in pairs(candidates) do
+                        ownerName = string.format("[ %s ] ( @%s )",
+                            candidate.player.DisplayName,
+                            candidate.player.Name)
+
+                        if not usedNames[ownerName] then
+                            closestPlayer = candidate.player
+                            closestDist = candidate.dist
+                            usedNames[ownerName] = true
+                            break
+                        end
+                    end
+
+                    if closestPlayer then
+                        ownerName = string.format("[ %s ] ( @%s )",
+                            closestPlayer.DisplayName,
+                            closestPlayer.Name)
+
+                        boolValue = nil
+                        for _, child in pairs(pcld:GetChildren()) do
+                            if child:IsA("BoolValue") then
+                                boolValue = child
+                                boolValue.Name = ownerName
+                                break
+                            end
+                        end
+
+                        if not boolValue then
+                            boolValue = Instance.new("BoolValue")
+                            boolValue.Name = ownerName
+                            boolValue.Parent = pcld
+                        end
+
+                        task.spawn(function(player, value)
+                            while value.Parent do
+                                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                                   hrp = player.Character.HumanoidRootPart
+                                    
+                                    if hrp.Massless == true then
+                                        if not value.Value then
+                                            value.Value = true
+                                        end
+                                    else
+                                        if value.Value then
+                                            value.Value = false
+                                        end
+                                    end
+
+                                    if not Players:FindFirstChild(player.Name) or 
+                                       not player.Character or 
+                                       player.Character:FindFirstChild("Humanoid") and 
+                                       player.Character.Humanoid.Health <= 0 then
+                                        value:Destroy()
+                                        break
+                                    end
+                                else
+                                    value:Destroy()
+                                    break
+                                end
+
+                                task.wait(0.1)
+                            end
+                        end, closestPlayer, boolValue)
                     end
                 end
             end
-        end)
-    end
-end)
+        end
+    end)
+end
 
-createSafeToggle("오토 어태커 (체력 0)", "AutoAttacker", function(Value)
-    if Value then
-        local connection
-        connection = game:GetService("RunService").Heartbeat:Connect(function()
-            if not Value then connection:Disconnect(); return end
-            for _, v in pairs(Players:GetPlayers()) do
-                if v ~= plr and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") then
-                    if (plr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < 30 then
-                        v.Character.Humanoid.Health = 0
+function SpawnCFrame()
+    local camPart
+    myDisplayName = plr.DisplayName
+    myUserName = plr.Name
+    myPOIdentifier = string.format("[ %s ] ( @%s )", myDisplayName, myUserName)
+
+    function findMyPO()
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name == "PlayerCharacterLocationDetector" then
+                for _, child in pairs(obj:GetChildren()) do
+                    if child:IsA("BoolValue") and child.Name == myPOIdentifier then
+                        return obj
                     end
                 end
             end
-        end)
+        end
+        return nil
+    end
+
+    if not workspace:FindFirstChild("CamPart") or workspace:FindFirstChild("CamPart"):FindFirstChild("CamPart") then
+        char = plr.Character or plr.CharacterAdded:Wait()
+        camPart = char:FindFirstChild("CamPart"):Clone()
+        camPart.Name = "CamPart"
+        camPart.Parent = workspace
+        camPart.Transparency = 0.9
+    else
+        camPart = workspace.CamPart
+    end
+
+    lastHRPVelocity = Vector3.new(0, 0, 0)
+
+    task.spawn(function()
+        rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+        while true do
+            ping = plr:GetNetworkPing()
+            myPO = findMyPO()
+            char = plr.Character
+            hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if hrp then
+                lastHRPVelocity = hrp.Velocity
+            end
+
+            if myPO and hrp then
+                rayParams.FilterDescendantsInstances = {char, camPart, myPO}
+                offset = myPO.Position + (lastHRPVelocity * (ping + 0.15))
+                rayOrigin = offset
+                rayDirection = Vector3.new(0, 23, 0)
+                rayResult = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+
+                local targetPosition
+
+                if rayResult then
+                    targetPosition = rayResult.Position - Vector3.new(0, 0.5, 0)
+                else
+                    targetPosition = offset + rayDirection
+                end
+
+                originalRotation = myPO.CFrame.Rotation * CFrame.Angles(math.rad(-90), 0, 0)
+                camPart.CFrame = CFrame.new(targetPosition) * originalRotation
+
+                rayParams.FilterDescendantsInstances = {char, camPart}
+                offset = hrp.Position + (lastHRPVelocity * (ping + 0.15))
+                rayOrigin = offset
+                rayDirection = Vector3.new(0, 20, 0)
+                rayResult = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+
+                if rayResult then
+                    targetPosition = rayResult.Position - Vector3.new(0, 0.5, 0)
+                else
+                    targetPosition = offset + rayDirection
+                end
+
+                originalRotation = (hrp.CFrame * CFrame.Angles(math.rad(-90), 0, 0)).Rotation
+                camPart.CFrame = CFrame.new(targetPosition) * originalRotation
+                camPart.Name = "SpawnCF"
+            end
+            task.wait()
+        end
+    end)
+
+    return camPart
+end
+
+-- ================== SpawnCFrame 호출 및 에러 방지 ==================
+local SCF = nil
+
+task.spawn(function()
+    task.wait(1.5)
+    local success = pcall(SpawnCFrame)
+    if success and workspace:FindFirstChild("SpawnCF") then
+        SCF = workspace.SpawnCF
+        print("SpawnCF 생성 성공")
+    else
+        print("SpawnCFrame 호출 실패, 강제 생성 시도...")
+        if not workspace:FindFirstChild("SpawnCF") then
+            local camPart = Instance.new("Part")
+            camPart.Name = "SpawnCF"
+            camPart.Transparency = 1
+            camPart.CanCollide = false
+            camPart.Anchored = true
+            camPart.Size = Vector3.new(1, 1, 1)
+            camPart.Parent = workspace
+            SCF = camPart
+            print("SpawnCF 강제 생성 완료")
+        else
+            SCF = workspace.SpawnCF
+        end
     end
 end)
 
-createSafeToggle("안티 그랩 구찌", "AntiGrabGucci", function(Value)
-    if Value then
-        print("안티 그랩 구찌 활성화됨")
-    end
-end)
+G = rs.GrabEvents
+G:WaitForChild("EndGrabEarly"):Destroy()
+Instance.new("RemoteEvent", G).Name = "EndGrabEarly"
 
--- ==========================================
--- [ 3번째 탭 ] 명단
--- ==========================================
-local ListTab = Window:CreateTab("명단", 4483362458)
+-- ================== 탭별 구성 ==================
+local Window = Rayfield:CreateWindow({
+    Name = "FTAP(반물사) | (made by 알파카)",
+    Icon = 0,
+    ToggleUIKeybind = "T",
+    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "AP_Config" }
+})
+
+local playerTab = Window:CreateTab("메인", 0)
+local grabTab = Window:CreateTab("컴뱃", 0)
+local antiTab = Window:CreateTab("안전", 0)
+local ListTab = Window:CreateTab("명단", 0)
+local LoopTab = Window:CreateTab("조지기", 0)
+local AuraTab = Window:CreateTab("아우라", 0)
+local funTab = Window:CreateTab("찌끄레기", 0)
+local keybindTab = Window:CreateTab("설정", 0)
+local DevTab = Window:CreateTab("Dev", 0)
+
+-- ================== 3번째 탭: 명단 ==================
 ListTab:CreateSection("플레이어 타겟 설정")
 
 local selectedTarget = nil
@@ -314,42 +370,91 @@ ListTab:CreateButton({
     end
 })
 
--- ==========================================
--- [ 4번째 탭 ] 조지기
--- ==========================================
-local TrollTab = Window:CreateTab("조지기", 4483362458)
-TrollTab:CreateSection("타겟 조지기 기능")
+-- ================== 4번째 탭: 조지기 (LoopTab) ==================
+LoopTab:CreateSection("paca Owner Kick")
 
-TrollTab:CreateButton({
-    Name = "타겟에게 이동하기",
-    Callback = function()
-        if selectedTarget and Players:FindFirstChild(selectedTarget) then
-            local targetChar = Players[selectedTarget].Character
-            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                plr.Character.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
-            end
-        else
-            Rayfield:Notify({
-                Title = "오류",
-                Content = "설정된 타겟이 없습니다.",
-                Duration = 3,
-                Image = 4483362458
-            })
-        end
-    end
-})
-
-TrollTab:CreateToggle({
-    Name = "오너 루프 킥(Owner Loop Kick)",
+LoopTab:CreateToggle({
+    Name = "paca Owner Loop Kick ((파카용)블롭 없이)",
     CurrentValue = false,
-    Flag = "OwnerLoopKickToggle",
+    Flag = "TokraOwnerKick",
     Callback = function(Value)
-        if Value then
-            print("오너 루프 킥이 작동됩니다.")
-        end
+        TokraOwnerKickConnections = {}
+        TokraOwnerKickT = Value
+        if TokraOwnerKickF then TokraOwnerKickF() end
     end
 })
 
+LoopTab:CreateToggle({
+    Name = "paca Owner Loop KickV2 ((파카용)블롭맨 없이)",
+    CurrentValue = false,
+    Flag = "OwnerLoopKick",
+    Callback = function(Value)
+        OwnerLoopKickT = Value
+        if OwnerLoopKickF then OwnerLoopKickF() end
+    end
+})
+
+LoopTab:CreateSection("Owner Kick")
+
+LoopTab:CreateToggle({
+    Name = "루프킬 [ Owner ]",
+    CurrentValue = false,
+    Flag = "21",
+    Callback = function(Value)
+        loopPlayerT = Value
+    end
+})
+
+LoopTab:CreateToggle({
+    Name = "루프킬 [ Owner V2 ]",
+    CurrentValue = false,
+    Flag = "21",
+    Callback = function(Value)
+        loopPlayerT2 = Value
+    end
+})
+
+-- ================== 2번째 탭: 안전 (Anti) 탭 기능과 함수 ==================
+antiTab:CreateSection("안전 기능")
+
+local function createAntiToggle(name, flagName, callbackFunc)
+    return antiTab:CreateToggle({
+        Name = name,
+        CurrentValue = false,
+        Flag = flagName,
+        Callback = callbackFunc
+    })
+end
+
+createAntiToggle("안티 그랩", "AntiGrab", function(Value)
+    
+end)
+
+createAntiToggle("안티 파이어", "AntiFire", function(Value)
+    
+end)
+
+createAntiToggle("안티 페인트", "AntiPaint", function(Value)
+    
+end)
+
+createAntiToggle("안티 킥", "AntiKick", function(Value)
+    
+end)
+
+createAntiToggle("안티 블롭맨", "AntiBlob", function(Value)
+    
+end)
+
+createAntiToggle("안티 폭탄", "AntiBomb", function(Value)
+    
+end)
+
+createAntiToggle("안티 렉", "AntiLag", function(Value)
+    
+end)
+
+-- ================== 로딩 성공 알림 ==================
 Rayfield:Notify({
     Title = "성공",
     Content = "Alpaca Hub UI가 성공적으로 로드되었습니다!",
